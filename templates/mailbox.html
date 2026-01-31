@@ -5,7 +5,7 @@
   <p class="muted">Mailbox: <code>{{ mailbox.address }}</code></p>
 
   <p class="row">
-    <a class="btn" href="{{ url_for('account_view', account_id=mailbox.account_id) }}">← Back to Account</a>
+    <a class="btn" href="{{ url_for('account_view', account_id=mailbox.account_id) }}"><i class="ri-arrow-left-line"></i> Back to Account</a>
     <span class="muted">{{ total }} total</span>
   </p>
 
@@ -42,10 +42,10 @@
 
   <div class="pager">
     {% if offset - limit >= 0 %}
-      <a class="btn" href="{{ url_for('view_mailbox', mailbox_id=mailbox.id, limit=limit, offset=offset-limit) }}">Newer</a>
+      <a class="btn" href="{{ url_for('view_mailbox', mailbox_id=mailbox.id, limit=limit, offset=offset-limit) }}"><i class="ri-arrow-left-s-line"></i> Newer</a>
     {% endif %}
     {% if offset + limit < total %}
-      <a class="btn" href="{{ url_for('view_mailbox', mailbox_id=mailbox.id, limit=limit, offset=offset+limit) }}">Older</a>
+      <a class="btn" href="{{ url_for('view_mailbox', mailbox_id=mailbox.id, limit=limit, offset=offset+limit) }}">Older <i class="ri-arrow-right-s-line"></i></a>
     {% endif %}
   </div>
 {% endblock %}
