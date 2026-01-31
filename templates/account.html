@@ -1,0 +1,105 @@
+{% extends "layout.html" %}
+{% block content %}
+  <h1>Account</h1>
+
+  <div class="row" style="margin-bottom:12px;">
+    <a class="btn" href="{{ url_for('dashboard') }}">← Back</a>
+    <a class="btn" href="{{ url_for('view_mailbox', mailbox_id=account.mailbox_id) }}">View Inbox</a>
+    <form method="post" action="{{ url_for('account_delete', account_id=account.id) }}" style="display:inline;">
+      <button class="btn btn-danger" type="submit" onclick="return confirm('Delete this account and all messages?')">Delete</button>
+    </form>
+  </div>
+
+  <div class="card">
+    <div class="kv">
+      <div class="k">Gmail</div>
+      <div class="v">
+        <div class="copyline">
+          <span class="mono" id="gmail">{{ account.gmail }}</span>
+          <button class="btn btn-sm" type="button" onclick="copyText('gmail')">Copy</button>
+        </div>
+      </div>
+
+      <div class="k">Generated Password</div>
+      <div class="v">
+        <div class="copyline">
+          <span class="mono" id="genpass">{{ account.generated_password }}</span>
+          <button class="btn btn-sm" type="button" onclick="copyText('genpass')">Copy</button>
+        </div>
+        <div class="muted">This password is generated once and will not change.</div>
+      </div>
+
+      <div class="k">Generated Email</div>
+      <div class="v">
+        <div class="copyline">
+          <span class="mono" id="genemail">{{ account.email }}</span>
+          <button class="btn btn-sm" type="button" onclick="copyText('genemail')">Copy</button>
+        </div>
+      </div>
+
+      <div class="k">Authenticator Code</div>
+      <div class="v">
+        {% if account.totp_secret %}
+          <div class="copyline">
+            <span class="mono bigcode" id="totpcode">{{ code }}</span>
+            <button class="btn btn-sm" type="button" onclick="copyText('totpcode')">Copy</button>
+          </div>
+          <div class="muted">Updates in real-time. Remaining: <span id="remain">{{ remaining }}</span>s</div>
+        {% else %}
+          <div class="muted">Not set yet. Upload QR or paste secret below.</div>
+        {% endif %}
+      </div>
+
+      <div class="k">Authenticator Info</div>
+      <div class="v">
+        <div class="mono">issuer: {{ account.totp_issuer or "-" }}</div>
+        <div class="mono">label: {{ account.totp_label or "-" }}</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:14px;">
+    <h2 style="margin:0 0 10px 0; font-size:16px;">Set Authenticator (QR or Secret)</h2>
+
+    <form method="post" action="{{ url_for('account_set_authenticator', account_id=account.id) }}" enctype="multipart/form-data">
+      <label>Upload QR image (screenshot/photo)</label>
+      <input class="input" type="file" name="qr_image" accept="image/*" />
+
+      <label>OR paste secret (Base32)</label>
+      <input class="input" type="text" name="secret" placeholder="JBSWY3DPEHPK3PXP" />
+
+      <button class="btn btn-primary" type="submit">Save authenticator</button>
+    </form>
+
+    <p class="muted" style="margin-top:10px;">
+      If the image contains many objects, the system will try to detect only the QR code.
+    </p>
+  </div>
+
+  <script>
+    async function refreshTOTP() {
+      try {
+        const res = await fetch("{{ url_for('account_totp_json', account_id=account.id) }}", { cache: "no-store" });
+        const data = await res.json();
+        if (!data.ok) return;
+
+        if (!data.enabled) return;
+
+        const codeEl = document.getElementById("totpcode");
+        const remEl = document.getElementById("remain");
+        if (codeEl && data.code) codeEl.textContent = data.code;
+        if (remEl && typeof data.remaining === "number") remEl.textContent = data.remaining;
+      } catch (e) {}
+    }
+
+    function copyText(id) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      const text = el.textContent || "";
+      navigator.clipboard.writeText(text);
+    }
+
+    // realtime updates
+    setInterval(refreshTOTP, 1000);
+  </script>
+{% endblock %}
