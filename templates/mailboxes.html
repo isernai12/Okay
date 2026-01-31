@@ -1,0 +1,31 @@
+{% extends "layout.html" %}
+{% block content %}
+  <h1>Mailboxes</h1>
+
+  {% if not mailboxes %}
+    <p>No messages yet.</p>
+  {% else %}
+    <div class="card">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Mailbox</th>
+            <th>Messages</th>
+            <th>Last received</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for m in mailboxes %}
+            <tr>
+              <td>
+                <a href="{{ url_for('mailbox_messages', mailbox=m.mailbox) }}">{{ m.mailbox }}</a>
+              </td>
+              <td>{{ m.count }}</td>
+              <td><code>{{ m.last_received_at }}</code></td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% endif %}
+{% endblock %}
