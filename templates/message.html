@@ -1,0 +1,32 @@
+{% extends "layout.html" %}
+{% block content %}
+  <h1>Message</h1>
+
+  <div class="card">
+    <div class="kv">
+      <div class="k">ID</div><div class="v mono">{{ msg.id }}</div>
+      <div class="k">Mailbox</div><div class="v"><code>{{ msg.mailbox }}</code></div>
+
+      <div class="k">Envelope From</div><div class="v mono">{{ msg.envelope_from }}</div>
+      <div class="k">Envelope To</div><div class="v mono">{{ msg.envelope_to }}</div>
+
+      <div class="k">Subject</div><div class="v">{{ msg.subject or "(no subject)" }}</div>
+      <div class="k">Received</div><div class="v"><code>{{ msg.received_at }}</code></div>
+
+      <div class="k">Parsed From</div><div class="v mono">{{ msg.parsed_from or "-" }}</div>
+      <div class="k">Parsed To</div><div class="v mono">{{ msg.parsed_to or "-" }}</div>
+      <div class="k">Parsed Date</div><div class="v mono">{{ msg.parsed_date or "-" }}</div>
+
+      <div class="k">Raw</div>
+      <div class="v">
+        <a class="btn" href="{{ url_for('message_raw', msg_id=msg.id) }}">Download .eml</a>
+      </div>
+    </div>
+  </div>
+
+  <form method="post" action="{{ url_for('message_delete', msg_id=msg.id) }}" class="danger">
+    <button class="btn btn-danger" type="submit" onclick="return confirm('Delete this message?')">
+      Delete message
+    </button>
+  </form>
+{% endblock %}
