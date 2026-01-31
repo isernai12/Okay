@@ -1,13 +1,11 @@
 {% extends "layout.html" %}
 {% block content %}
-  <h1>Mailbox</h1>
+  <h1>Inbox</h1>
 
-  <p class="muted">
-    Address: <code>{{ mailbox.address }}</code>
-  </p>
+  <p class="muted">Mailbox: <code>{{ mailbox.address }}</code></p>
 
   <p class="row">
-    <a class="btn" href="{{ url_for('dashboard') }}">← Back</a>
+    <a class="btn" href="{{ url_for('account_view', account_id=mailbox.account_id) }}">← Back to Account</a>
     <span class="muted">{{ total }} total</span>
   </p>
 
