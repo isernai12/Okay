@@ -1,49 +1,271 @@
 {% extends "layout.html" %}
+
 {% block content %}
-  <h1>Message</h1>
+<style>
+  /* --- Page Styles --- */
+  .page-header {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+  @media (min-width: 600px) {
+    .page-header {
+      flex-direction: row;
+      align-items: center;
+      justify-content: space-between;
+    }
+  }
 
-  <p class="muted">Mailbox: <code>{{ msg.mailbox_address }}</code></p>
+  .page-title {
+    font-size: 24px;
+    font-weight: 600;
+    color: #111827;
+    margin: 0;
+  }
 
-  <div class="card">
-    <div class="kv">
-      <div class="k">ID</div><div class="v mono">{{ msg.id }}</div>
+  .subtitle {
+    font-size: 14px;
+    color: #6b7280;
+    margin-top: 4px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
 
-      <div class="k">Envelope From</div><div class="v mono">{{ msg.envelope_from }}</div>
-      <div class="k">Envelope To</div><div class="v mono">{{ msg.envelope_to }}</div>
+  .address-badge {
+    background: #eff6ff;
+    color: #1d4ed8;
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-family: ui-monospace, monospace;
+    font-size: 13px;
+    border: 1px solid #dbeafe;
+  }
 
-      <div class="k">Subject</div><div class="v">{{ msg.subject or "(no subject)" }}</div>
-      <div class="k">Received</div><div class="v"><code>{{ msg.received_at }}</code></div>
+  /* --- Card & Grid Styles --- */
+  .card {
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 24px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    margin-bottom: 24px;
+  }
 
-      <div class="k">Parsed From</div><div class="v mono">{{ msg.parsed_from or "-" }}</div>
-      <div class="k">Parsed To</div><div class="v mono">{{ msg.parsed_to or "-" }}</div>
-      <div class="k">Parsed Date</div><div class="v mono">{{ msg.parsed_date or "-" }}</div>
+  .info-grid {
+    display: grid;
+    gap: 20px;
+  }
 
-      <div class="k">Raw</div>
-      <div class="v">
-        <a class="btn" href="{{ url_for('download_raw', msg_id=msg.id) }}"><i class="ri-download-2-line"></i> Download .eml</a>
+  /* Responsive Grid for larger screens */
+  @media (min-width: 768px) {
+    .info-grid {
+      grid-template-columns: 1fr 1fr;
+    }
+    .full-width {
+      grid-column: span 2;
+    }
+  }
+
+  .info-item {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    border-bottom: 1px solid #f3f4f6;
+    padding-bottom: 12px;
+  }
+  
+  /* Remove border for last items in desktop view if needed, 
+     but simpler to keep vertical rhythm or remove borders entirely 
+     and rely on spacing */
+  .info-item { border-bottom: none; }
+
+  .label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .value {
+    font-size: 14px;
+    color: #1f2937;
+    word-break: break-word;
+  }
+
+  .mono-text {
+    font-family: ui-monospace, monospace;
+    font-size: 13px;
+    color: #111827;
+    background: #f9fafb;
+    padding: 2px 6px;
+    border-radius: 4px;
+    display: inline-block;
+  }
+
+  /* Buttons */
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    padding: 10px 16px; border-radius: 6px; font-size: 14px; font-weight: 500;
+    text-decoration: none; cursor: pointer; transition: all 0.2s; border: 1px solid transparent;
+  }
+  
+  .btn-default { background: #fff; border-color: #d1d5db; color: #374151; }
+  .btn-default:hover { background: #f3f4f6; }
+
+  .btn-primary { background: #0969da; color: #fff; }
+  .btn-primary:hover { background: #0a58ca; }
+
+  .btn-danger { background: #fee2e2; color: #b91c1c; border-color: #fecaca; width: 100%; }
+  .btn-danger:hover { background: #fecaca; }
+  @media (min-width: 600px) { .btn-danger { width: auto; } }
+
+  .icon-svg { width: 18px; height: 18px; stroke-width: 1.8; }
+  
+  /* Modal Styles */
+  .modal {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.5); z-index: 50;
+    display: none; align-items: center; justify-content: center;
+    backdrop-filter: blur(2px);
+  }
+  .modal.open { display: flex; }
+  
+  .modal-card {
+    background: white; padding: 24px; border-radius: 12px;
+    width: 90%; max-width: 400px;
+    text-align: center;
+    box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);
+  }
+  .modal-actions { display: flex; justify-content: center; gap: 10px; margin-top: 20px; }
+
+</style>
+
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">Message Details</h1>
+      <div class="subtitle">
+        Mailbox: <span class="address-badge">{{ msg.mailbox_address }}</span>
       </div>
+    </div>
+    
+    <div>
+      <a class="btn btn-default" href="javascript:history.back()">
+        <svg class="icon-svg" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
+        </svg>
+        Back
+      </a>
     </div>
   </div>
 
-  <form method="post" action="{{ url_for('delete_message', msg_id=msg.id) }}" class="danger" id="delete-message-form">
+  <div class="card">
+    <div class="info-grid">
+      
+      <div class="info-item">
+        <div class="label">Message ID</div>
+        <div class="value"><span class="mono-text">{{ msg.id }}</span></div>
+      </div>
+      
+      <div class="info-item">
+        <div class="label">Received At</div>
+        <div class="value">
+           <span class="bd-time" data-time="{{ msg.received_at }}">{{ msg.received_at }}</span>
+        </div>
+      </div>
+
+      <div class="info-item full-width">
+        <div class="label">Subject</div>
+        <div class="value" style="font-size:16px; font-weight:600; color:#111827;">
+          {{ msg.subject or "(no subject)" }}
+        </div>
+      </div>
+
+      <div class="info-item">
+        <div class="label">Envelope From</div>
+        <div class="value mono-text">{{ msg.envelope_from }}</div>
+      </div>
+      <div class="info-item">
+        <div class="label">Envelope To</div>
+        <div class="value mono-text">{{ msg.envelope_to }}</div>
+      </div>
+
+      <div class="info-item">
+        <div class="label">Parsed From</div>
+        <div class="value">{{ msg.parsed_from or "-" }}</div>
+      </div>
+      <div class="info-item">
+        <div class="label">Parsed To</div>
+        <div class="value">{{ msg.parsed_to or "-" }}</div>
+      </div>
+      
+      <div class="info-item">
+        <div class="label">Parsed Date</div>
+        <div class="value mono-text">{{ msg.parsed_date or "-" }}</div>
+      </div>
+
+      <div class="info-item">
+        <div class="label">Raw Content</div>
+        <div class="value" style="margin-top:5px;">
+          <a class="btn btn-primary" href="{{ url_for('download_raw', msg_id=msg.id) }}">
+            <svg class="icon-svg" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M12 9.75V1.5m0 0l3 3m-3-3l-3 3M6.75 6.75h10.5l2.25 2.25v7.5a2.25 2.25 0 0 1-2.25 2.25H6.75a2.25 2.25 0 0 1-2.25-2.25v-7.5l2.25-2.25Z" />
+            </svg>
+            Download .eml
+          </a>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <form method="post" action="{{ url_for('delete_message', msg_id=msg.id) }}" id="delete-message-form">
     <button class="btn btn-danger" type="button" data-confirm="delete-message">
-      <i class="ri-delete-bin-6-line"></i> Delete message
+      <svg class="icon-svg" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
+      </svg>
+      Delete message
     </button>
   </form>
 
   <div class="modal" id="confirm-modal" aria-hidden="true">
     <div class="modal-card" role="dialog" aria-modal="true">
-      <div class="modal-icon"><i class="ri-alert-line"></i></div>
-      <h3 id="modal-title">Delete message?</h3>
-      <p id="modal-message" class="muted">This will permanently delete the message from the server.</p>
+      <div style="color:#ef4444; margin-bottom:10px;">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:48px; height:48px; margin:0 auto;">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+        </svg>
+      </div>
+      <h3 id="modal-title" style="margin:0 0 10px 0; font-size:18px;">Delete message?</h3>
+      <p id="modal-message" style="color:#6b7280; font-size:14px;">This will permanently delete the message from the server.</p>
       <div class="modal-actions">
-        <button class="btn" type="button" data-close-modal>Cancel</button>
-        <button class="btn btn-danger" type="button" id="modal-confirm">Delete</button>
+        <button class="btn btn-default" type="button" data-close-modal>Cancel</button>
+        <button class="btn btn-danger" type="button" id="modal-confirm" style="width:auto;">Delete</button>
       </div>
     </div>
   </div>
 
   <script>
+    // BD Time Script
+    document.addEventListener('DOMContentLoaded', function() {
+      const timeElements = document.querySelectorAll('.bd-time');
+      timeElements.forEach(el => {
+        const rawTime = el.getAttribute('data-time');
+        if (rawTime && rawTime !== 'None') {
+          const date = new Date(rawTime);
+          if (!isNaN(date)) {
+            el.textContent = date.toLocaleString('en-BD', {
+              timeZone: 'Asia/Dhaka',
+              month: 'long', day: 'numeric', year: 'numeric',
+              hour: 'numeric', minute: '2-digit', second: '2-digit', hour12: true
+            });
+          }
+        }
+      });
+    });
+
+    // Modal Logic
     const modal = document.getElementById("confirm-modal");
     const modalConfirm = document.getElementById("modal-confirm");
     const closeModalButtons = modal.querySelectorAll("[data-close-modal]");
